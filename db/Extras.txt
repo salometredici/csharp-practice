@@ -1,0 +1,19 @@
+- Notas:
+
+Había estimado que me iba a llevar alrededor de 12hs, pero finalmente me llevó aprox. 17hs
+
+Al levantar la solución se puede utilizar Swagger para probar los endpoints
+
+- Limitaciones:
+
+Se puede registrar usuarios nuevos, pero por una cuestión de tiempo no llegué a hacer todos los endpoints que hubiese querido, por ejemplo para crear una cuenta nueva para esos usuarios, añadirle saldo, obtenerlas, etc
+
+- Mejoras:
+
+Esta aplicación tendría potencial para expandirse mucho más, desde completar la funcionalidad de registro/login, a la creación de cuentas, depósitos, etc.
+También se podría refinar el modelo de datos a medida que se agreguen funcionalidades
+Por supuesto que con más tiempo se podría hacer un FE
+
+Particularmente de esta prueba no llegué con los tiempos para agregar una consideración más que pensé respecto a la API externa, ya sea cachear las cotizaciones para tenerlas disponibles en caso de exceder la cuota por minuto o bien ir actualizando en la tabla de la base de datos
+De esta forma de no poder realizarse los requests a la API la cotización se obtendría de nuestro lado, y el cliente podría realizar la transferencia
+

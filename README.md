@@ -132,3 +132,6 @@ El titular de la cuenta de origen __debe__ coincidir con el usuario logueado par
 ```
 Transactions.Domain.HttpException: Logged user differs from the user making the transfer
 ```
+#### Comentarios
+
+En la carpeta __db__ está el archivo *Notas.txt* con más detalles sobre las limitaciones, mejoras a futuro y otros comentarios sobre la resolución
