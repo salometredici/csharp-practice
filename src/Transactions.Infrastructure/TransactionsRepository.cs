@@ -19,7 +19,7 @@ namespace Transactions.Infrastructure
         // Transactions
         Task<float> GetCommissionRate();
         Task<AccountResponse> GetAccountAsync(int accountId);
-        Task<TransferDto> TransferAmountAsync(TransferRequest request, float amountToAddOnDestAcc, float commissionAmount);
+        Task<TransferDto> TransferAmountAsync(TransferInsertionRequest request);
         Task<IEnumerable<TransactionResponse>> SearchTransactionsAsync(int userId, DateTime? from, DateTime? to, int? srcAccId);
     }
 
@@ -102,24 +102,26 @@ namespace Transactions.Infrastructure
             }
         }
 
-        public async Task<TransferDto> TransferAmountAsync(TransferRequest request, float amountToAddOnDestAcc, float commissionAmount)
+        public async Task<TransferDto> TransferAmountAsync(TransferInsertionRequest request)
         {
             using (var conn = CreateConnection())
             {
                 conn.Open();
                 var sql = $"SELECT * FROM transactions.func_transfer_amount(" +
-                    $"@p_acc_from::integer,@p_acc_to::integer,@p_amount_to_debit_on_origin::real," +
-                    $"@p_amount_to_add_on_dest::real,@p_date::timestamp,@p_descrip::varchar,@p_commission_amount::real);";
+                    $"@p_acc_from::integer,@p_origin_curr_code::varchar,@p_acc_to::integer,@p_dest_curr_code::varchar," +
+                    $"@p_amount_to_debit_on_origin::real,@p_amount_to_add_on_dest::real,@p_date::timestamp,@p_descrip::varchar,@p_commission_amount::real);";
 
                 return await conn.QueryFirstAsync<TransferDto>(sql, new
                 {
                     p_acc_from = request.AccountFrom,
+                    p_origin_curr_code = request.OriginCurrencyCode,
                     p_acc_to = request.AccountTo,
+                    p_dest_curr_code = request.DestCurrencyCode,
                     p_amount_to_debit_on_origin = request.Amount,
-                    p_amount_to_add_on_dest = amountToAddOnDestAcc,
+                    p_amount_to_add_on_dest = request.AmountToAddOnDestAcc,
                     p_date = request.Date,
                     p_descrip = request.Description,
-                    p_commission_amount = commissionAmount
+                    p_commission_amount = request.CommissionAmount
                 });
             }
         }

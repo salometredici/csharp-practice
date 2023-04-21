@@ -2,7 +2,7 @@
 using Polly.RateLimit;
 using Transactions.Domain;
 
-namespace Transactions.Infrastructure
+namespace Transactions.Bootstrap
 {
     public static class RateLimiterPolly
     {
@@ -16,7 +16,6 @@ namespace Transactions.Infrastructure
             var result = await _throttlingPolicy.ExecuteAndCaptureAsync(func);
             if (result.Outcome == OutcomeType.Failure)
             {
-                var retryAfter = (result.FinalException as RateLimitRejectedException)?.RetryAfter ?? TimeSpan.FromMinutes(1);
                 throw new HttpException(result.FinalException.Message, 429);
             }
             return result.Result;

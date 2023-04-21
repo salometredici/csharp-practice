@@ -1,4 +1,6 @@
 ﻿using MediatR;
+using System.Security.Claims;
+using Transactions.Domain;
 using Transactions.Domain.Transfers;
 using Transactions.Infrastructure;
 
@@ -8,7 +10,13 @@ namespace Transactions.Application.Transactions
     {
         public TransferRequest Request { get; set; }
 
-        public TransferCommand(TransferRequest request) => Request = request;
+        public ClaimsPrincipal ClaimsUser { get; set; }
+
+        public TransferCommand(TransferRequest request, ClaimsPrincipal claimsUser)
+        {
+            Request = request;
+            ClaimsUser = claimsUser;
+        }
     }
 
     public class TransferCommandHandler : IRequestHandler<TransferCommand, TransferResponse>
@@ -29,6 +37,8 @@ namespace Transactions.Application.Transactions
             var originAcc = await _transactionsRepository.GetAccountAsync(request.AccountFrom);
             var destAcc = await _transactionsRepository.GetAccountAsync(request.AccountTo);
 
+            VerifyUserIdentity(command.ClaimsUser, originAcc.UserId);
+
             var amountToAddOnDestAcc = RequiresConversion(originAcc.CurrencyId, destAcc.CurrencyId) ?
                 await GetConvertedAmount(request.Amount, originAcc.CurrencyCode, destAcc.CurrencyCode) :
                 request.Amount;
@@ -36,7 +46,14 @@ namespace Transactions.Application.Transactions
             var commissionAmount = IsThirdPartyTransfer(originAcc.UserId, destAcc.UserId) ?
                 await GetCommissionAmount(request.Amount) : 0;
 
-            var result = await _transactionsRepository.TransferAmountAsync(request, amountToAddOnDestAcc, commissionAmount);
+            var insertionRequest = new TransferInsertionRequest(request)
+            {
+                OriginCurrencyCode = originAcc.CurrencyCode,
+                DestCurrencyCode = destAcc.CurrencyCode,
+                AmountToAddOnDestAcc = amountToAddOnDestAcc,
+                CommissionAmount = commissionAmount
+            };
+            var result = await _transactionsRepository.TransferAmountAsync(insertionRequest);
 
             return result.ToResponse(originAcc.CurrencyCode, destAcc.CurrencyCode);
         }
@@ -60,10 +77,21 @@ namespace Transactions.Application.Transactions
         /// </summary>
         private async Task<float> GetConvertedAmount(float amount, string originCurrencyCode, string destCurrencyCode)
         {
-            //return 0.02572f;
-            // chequear lo del coste por llamado y volumen de transacciones por orden del millon
             var response = await _currenciesService.ConvertAmountAsync(amount, originCurrencyCode, destCurrencyCode);
             return response.Result;
+        }
+
+        /// <summary>
+        /// Checks whether the user that is requesting the transfer is the same as the one logged in
+        /// </summary>
+        private void VerifyUserIdentity(ClaimsPrincipal claimsUser, int userId)
+        {
+            var loggedUserId = claimsUser.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+
+            if (int.Parse(loggedUserId) !=  userId)
+            {
+                throw new HttpException("Logged user differs from the user making the transfer", 401);
+            }
         }
     }
 }

@@ -3,7 +3,9 @@ using Refit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Transactions.Infrastructure;
 using Microsoft.IdentityModel.Tokens;
+using Transactions.Bootstrap.Extensions;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace Transactions.API
 {
@@ -18,26 +20,23 @@ namespace Transactions.API
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllers();
-            services.AddHttpContextAccessor();
-
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             services.AddEndpointsApiExplorer();
-            services.AddSwaggerGen();
+            services.AddSwaggerGenerator();
+            services.AddRefitClient<ICurrenciesClient>()
+                .ConfigureHttpClient((serviceProvider, client) =>
+                {
+                    client.BaseAddress = new Uri(Configuration.GetSection("CurrencyAPIUrl").Value!);
+                    client.DefaultRequestHeaders.Add("apikey", Configuration.GetSection("CurrencyAPIkey").Value!);
+                });
+            services.AddHttpContextAccessor();
 
-            //services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
-            //{
-            //    options.TokenValidationParameters = new TokenValidationParameters()
-            //    {
-            //        ValidateIssuer = true,
-            //        ValidateAudience = true,
-            //        ValidateLifetime = true,
-            //        ValidateIssuerSigningKey = true,
-            //        ValidIssuer = Configuration.GetSection("Jwt:Issuer").Value,
-            //        ValidAudience = Configuration.GetSection("Jwt:Audience").Value,
-            //        IssuerSigningKey = new SymmetricSecurityKey()
-            //    }
-            //});
+            services.AddScoped<IJwtProvider, JwtProvider>();
+            services.AddScoped<ICurrenciesService, CurrenciesService>();
+            services.AddScoped<ITransactionsRepository, TransactionsRepository>();
+
+            var assembly = AppDomain.CurrentDomain.Load("Transactions.Application");
+            services.AddMediatR(assembly);
 
             services.AddAuthorization(options =>
             {
@@ -57,22 +56,15 @@ namespace Transactions.API
                         ValidateIssuerSigningKey = true,
                         ValidIssuer = Configuration["Jwt:Issuer"],
                         ValidAudience = Configuration["Jwt:Audience"],
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Jwt:SymmetricKey"]!))
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Jwt:Key"]!))
                     };
                 });
 
-            services.AddRefitClient<ICurrenciesClient>()
-                .ConfigureHttpClient((serviceProvider, client) =>
+            services.AddControllers()
+                .AddJsonOptions(x =>
                 {
-                    client.BaseAddress = new Uri(Configuration.GetSection("CurrencyAPIUrl").Value!);
-                    client.DefaultRequestHeaders.Add("apikey", Configuration.GetSection("CurrencyAPIkey").Value!);
+                    x.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 });
-
-            services.AddScoped<ICurrenciesService, CurrenciesService>();
-            services.AddScoped<ITransactionsRepository, TransactionsRepository>();
-
-            var assembly = AppDomain.CurrentDomain.Load("Transactions.Application");
-            services.AddMediatR(assembly);
         }
 
         public void Configure(WebApplication app, IWebHostEnvironment env)
@@ -84,10 +76,22 @@ namespace Transactions.API
                 app.UseSwaggerUI();
             }
 
+            var forwardedHeadersOptions = new ForwardedHeadersOptions() { ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.All };
+            forwardedHeadersOptions.KnownNetworks.Clear();
+            forwardedHeadersOptions.KnownProxies.Clear();
+            app.UseForwardedHeaders(forwardedHeadersOptions);
+
+            app.UseRouting();
             app.UseHttpsRedirection();
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapDefaultControllerRoute();
+                endpoints.MapControllers().RequireAuthorization("JwtPolicy");
+            });
         }
     }
 }

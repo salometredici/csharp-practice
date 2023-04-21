@@ -1,4 +1,5 @@
-﻿using Transactions.Domain;
+﻿using Transactions.Bootstrap;
+using Transactions.Domain;
 
 namespace Transactions.Infrastructure
 {

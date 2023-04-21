@@ -4,9 +4,9 @@
     {
         public int TransactionId { get; set; }
         public int OriginAccId { get; set; }
-        public string OriginCurrDescrip { get; set; }
+        public string OriginCurrCode { get; set; }
         public int DestAccId { get; set; }
-        public string DestCurrDescrip { get; set; }
+        public string DestCurrCode { get; set; }
         public double TransactionAmount { get; set; }
         public DateTime TransactionDate { get; set; }
         public string TransactionDescrip { get; set; }
@@ -17,9 +17,9 @@
             {
                 Id = TransactionId,
                 AccountFrom = OriginAccId,
-                OriginCurrency = OriginCurrDescrip,
+                OriginCurrency = OriginCurrCode,
                 AccountTo = DestAccId,
-                DestCurrency = DestCurrDescrip,
+                DestCurrency = DestCurrCode,
                 Amount = TransactionAmount,
                 Date = TransactionDate,
                 Description = TransactionDescrip

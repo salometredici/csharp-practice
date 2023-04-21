@@ -8,8 +8,7 @@
         public string Currency { get; set; }
         public double Balance { get; set; }
         public int UserId { get; set; }
-        public string Name { get; set; }
-        public string Surname { get; set; }
+        public string UserFullName { get; set; }
 
         public AccountResponse ToResponse()
         {
@@ -21,7 +20,7 @@
                 Currency = Currency,
                 Balance = Balance,
                 UserId = UserId,
-                FullName = $"{Name} {Surname}"
+                FullName = UserFullName
             };
         }
     }

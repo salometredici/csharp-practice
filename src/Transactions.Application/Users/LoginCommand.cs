@@ -1,42 +1,52 @@
 ﻿using MediatR;
-using System.Net;
+using Transactions.Domain;
 using Transactions.Domain.Users;
 using Transactions.Infrastructure;
 
 namespace Transactions.Application.Users
 {
-    public class LoginCommand : IRequest<UserResponse>
+    public class LoginCommand : IRequest<UserWithTokenResponse>
     {
         public LoginRequest Request { get; set; }
 
         public LoginCommand(LoginRequest request) => Request = request;
     }
 
-    public class LoginCommandHandler : IRequestHandler<LoginCommand, UserResponse>
+    public class LoginCommandHandler : IRequestHandler<LoginCommand, UserWithTokenResponse>
     {
+        private readonly IJwtProvider _jwtProvider;
         private readonly ITransactionsRepository _transactionsRepository;
 
-        public LoginCommandHandler(ITransactionsRepository transactionsRepository) => _transactionsRepository = transactionsRepository;
+        public LoginCommandHandler(IJwtProvider jwtProvider, ITransactionsRepository transactionsRepository)
+        {
+            _jwtProvider = jwtProvider;
+            _transactionsRepository = transactionsRepository;
+        }
 
-        public async Task<UserResponse> Handle(LoginCommand command, CancellationToken cancellationToken)
+        public async Task<UserWithTokenResponse> Handle(LoginCommand command, CancellationToken cancellationToken)
         {
             var request = command.Request;
 
             var user = await _transactionsRepository.GetUserByEmailAsync(request.Email);
             if (user == null)
             {
-                throw new HttpRequestException("Email not registered", null, HttpStatusCode.NotFound);
+                throw new HttpException("Email not registered", 404);
             }
             else if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PwdHash))
             {
-                throw new HttpRequestException("Invalid password", null, HttpStatusCode.Unauthorized);
+                throw new HttpException("Invalid password", 401);
             }
 
             user.LastLoginDate = DateTime.Now;
             await _transactionsRepository.LoginAsync(request.Email, user.LastLoginDate);
-            //<- devolver jwt
 
-            return user.ToResponse();
+            var tokenResponse = _jwtProvider.GetJwtTokenResponse(user);
+
+            return new UserWithTokenResponse(user.ToResponse())
+            {
+                JwtToken = tokenResponse.BearerToken,
+                TokenExpDate = tokenResponse.ExpirationDate
+            };
         }
     }
 }
