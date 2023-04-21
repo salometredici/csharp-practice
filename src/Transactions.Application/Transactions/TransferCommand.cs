@@ -34,8 +34,8 @@ namespace Transactions.Application.Transactions
         {
             var request = command.Request;
 
-            var originAcc = await _transactionsRepository.GetAccountAsync(request.AccountFrom);
-            var destAcc = await _transactionsRepository.GetAccountAsync(request.AccountTo);
+            var originAcc = await _transactionsRepository.GetAccountByIdAsync(request.AccountFrom);
+            var destAcc = await _transactionsRepository.GetAccountByIdAsync(request.AccountTo);
 
             VerifyUserIdentity(command.ClaimsUser, originAcc.UserId);
 

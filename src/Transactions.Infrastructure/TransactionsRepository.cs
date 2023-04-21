@@ -18,7 +18,7 @@ namespace Transactions.Infrastructure
         Task LoginAsync(string email, DateTime? loginDate);
         // Transactions
         Task<float> GetCommissionRate();
-        Task<AccountResponse> GetAccountAsync(int accountId);
+        Task<AccountResponse> GetAccountByIdAsync(int accountId);
         Task<TransferDto> TransferAmountAsync(TransferInsertionRequest request);
         Task<IEnumerable<TransactionResponse>> SearchTransactionsAsync(int userId, DateTime? from, DateTime? to, int? srcAccId);
     }
@@ -91,7 +91,7 @@ namespace Transactions.Infrastructure
             }
         }
 
-        public async Task<AccountResponse> GetAccountAsync(int accountId)
+        public async Task<AccountResponse> GetAccountByIdAsync(int accountId)
         {
             using (var conn = CreateConnection())
             {
